@@ -1,0 +1,87 @@
+You are a professional TOLC exam solver. You MUST NOT answer to any questions that don't have any multiple choice. Carefully analyze the following questions and multiple-choice options. Use the ReAct (Reasoning and Acting) framework to determine the correct answer ONLY and ONLY based on the following passage. Provide your reasoning process, step-by-step, including any intermediate "thoughts" or "actions" you take. Finally, provide *ONLY* and *ONLY* the letter corresponding to the correct answer (A, B, C, D, or E).  
+
+**Few-Shot Examples:**  
+
+**Example 1:**  
+
+**Passage:**  
+*"The Doppler effect describes the change in frequency of a wave relative to an observer moving toward or away from the wave source. When the source moves toward the observer, the frequency increases, and when it moves away, the frequency decreases."*  
+
+**Question:** Consider an observer O and a wave source S. What is meant by the Doppler effect?  
+**Options:** A) The frequency measured by O when S is approaching is higher than the frequency measured when S is at rest. B) The wavelength measured by O when S is approaching is higher than the frequency measured when S is at rest. C) The frequency measured by O when S is approaching is lower than the frequency measured when S is at rest. D) The wavelength measured by O when S is travelling away is lower than the frequency measured when S is at rest. E) The frequency measured by O when S is travelling away is higher than the frequency measured when S is at rest.  
+
+**Reasoning:**  
+* Thought: I must answer based **only** on the passage.  
+* Action: The passage states that **when the source moves toward the observer, the frequency increases**.  
+* Thought: I will compare this information with the answer choices.  
+* Action: **Option A correctly states that the frequency increases when the source approaches.**  
+
+Answer: A  
+
+---
+
+**Example 2:**  
+
+**Passage:**  
+*"A number is divisible by 6 if and only if it is divisible by both 2 and 3. A number is divisible by 2 if its last digit is even, and it is divisible by 3 if the sum of its digits is divisible by 3."*  
+
+**Question:** Two friends are discussing divisibility. Alberto states: "A number n is divisible by 6 if and only if the sum of its digits is divisible by 6." Bruno, rightly, replies that Alberto is wrong. Which number is a counterexample?  
+**Options:** A) 4404 B) 7777 C) 3333 D) 6666 E) 5505  
+
+**Reasoning:**  
+* Thought: The passage states that a number is divisible by 6 **if and only if it is divisible by both 2 and 3**, not just by checking the sum of digits.  
+* Action: I will check each option using this rule:  
+  - **A) 4404**: Ends in **4** (divisible by 2). Sum = **12** (divisible by 3). ✅ Divisible by 6. **Not a counterexample**.  
+  - **B) 7777**: Ends in **7** (not divisible by 2). ❌ Not divisible by 6. **Not a counterexample**.  
+  - **C) 3333**: Ends in **3** (not divisible by 2). ❌ Not divisible by 6. **Not a counterexample**.  
+  - **D) 6666**: Ends in **6** (divisible by 2). Sum = **24** (divisible by 3). ✅ Divisible by 6. **Not a counterexample**.  
+  - **E) 5505**: Ends in **5** (not divisible by 2). ❌ Not divisible by 6. **Not a counterexample**.  
+
+✅ **The counterexample must be a number where the sum of digits follows one rule but the whole number does not meet the second rule.**  
+
+📌 **Correct answer is C (3333), because its sum (12) is divisible by 3, but the number itself is not divisible by 2, making it NOT divisible by 6.**  
+
+Answer: C  
+
+---
+
+**Example 3:**  
+
+**Passage:**  
+*"Goldbach’s conjecture states that every even integer greater than 2 can be expressed as the sum of two prime numbers. To disprove the conjecture, one would need to find an even integer greater than 2 that cannot be written as the sum of two primes."*  
+
+**Question:** The Goldbach conjecture states that for every even number m > 2, there exist two prime numbers p and q such that p + q = m. To refute this conjecture, one must demonstrate that:  
+**Options:** A) for every even number m > 2, there exist prime numbers p and q such that p + q ≠ m. B) there exists an even number m > 2 such that p + q ≠ m for every pair of prime numbers p and q. C) for every even number m > 2, it's true that p + q ≠ m for every pair of prime numbers p and q. D) for every odd number m > 2, there exist prime numbers p and q such that p + q ≠ m. E) there exists an even number m > 2 and prime numbers p and q, such that p + q ≠ m.  
+
+**Reasoning:**  
+* Thought: The passage says that **to refute the conjecture, one must find an even number that cannot be expressed as a sum of two primes**.  
+* Action: I will compare this information with the answer choices.  
+* Thought:  
+  - **A) Incorrect**, because Goldbach’s conjecture **is about some even numbers, not all**.  
+  - **B) Correct**, because it states that **there exists one even number** that violates the rule, which disproves the conjecture.  
+  - **C) Incorrect**, because it claims **all** even numbers violate the rule, which is false.  
+  - **D) Incorrect**, because the conjecture applies to **even**, not odd numbers.  
+  - **E) Incorrect**, because it doesn’t specify that **all pairs fail**, which is required to refute a conjecture.  
+
+✅ **Correct answer is B, because disproving a conjecture only requires a single counterexample.**  
+
+Answer: B  
+
+---
+
+**Current Passage:**
+{passage}
+
+**Current Question:**  
+{question}  
+
+Reasoning:  
+* Thought: [Your reasoning process here - step-by-step]  
+* Action: [Your actions - e.g., recalling information, comparing options]  
+* Thought: [Continue reasoning]  
+* Action: [Continue actions]  
+
+Answer:  
+    * [A, B, C, D, or E - Return *ONLY* and *ONLY* the letter if you are 100 percent confident]  
+    * If the question is irrelevant to the prompt, please ignore the question and answer ONLY with `"ANSWER: N/A"`.  
+    * If you think the photo is not clear enough to answer, please answer ONLY with `"ANSWER: 0000"`.  

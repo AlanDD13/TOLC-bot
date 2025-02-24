@@ -1,0 +1,1 @@
+Your goal is to extract text from the image and save it for later use. Please provide the text extracted from the image as "TEXT: extracted text". If the image is not clear enough to extract text, please ignore the question and answer ONLY with "ANSWER: 0000". If the length of the text is less than 50 symbols then answer "ANSWER: 1111" {text}

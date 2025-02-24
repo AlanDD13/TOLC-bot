@@ -1,0 +1,37 @@
+{
+    "session_expired": {
+      "english": "⚠️ Session expired. Please restart the bot using /start.",
+      "russian": "⚠️ Сессия истекла. Пожалуйста, перезапустите бота с помощью /start.",
+      "uzbek": "⚠️ Sessiya tugadi. Iltimos, /start buyrug'ini yuboring."
+    },
+    "processing_error": {
+      "english": "⚠️ Error processing your request.",
+      "russian": "⚠️ Ошибка при обработке вашего запроса.",
+      "uzbek": "⚠️ So'rovingizni qayta ishlashda xatolik yuz berdi."
+    },
+    "no_answer": {
+      "english": "⚠️ Unable to determine an answer.",
+      "russian": "⚠️ Невозможно определить ответ.",
+      "uzbek": "⚠️ Javobni aniqlash mumkin emas."
+    },
+    "image_not_clear": {
+      "english": "⚠️ Image is not clear enough to answer.",
+      "russian": "⚠️ Изображение недостаточно четкое для ответа.",
+      "uzbek": "⚠️ Rasm javob berish uchun yetarli emas."
+    },
+    "text_saved": {
+      "english": "✅ Text saved.",
+      "russian": "✅ Текст сохранен.",
+      "uzbek": "✅ Matn saqlandi."
+    },
+    "not_a_text": {
+      "english": "⚠️ It is not a text",
+      "russian": "⚠️ Это не текст",
+      "uzbek": "⚠️ Bu matn emas"
+    },
+    "image_not_clear_extract": {
+      "english": "⚠️ Image is not clear enough to extract text.",
+      "russian": "⚠️ Изображение недостаточно четкое для извлечения текста.",
+      "uzbek": "⚠️ Rasm matnini ajratib olish uchun yetarli emas."
+    }
+  }
