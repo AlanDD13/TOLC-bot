@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, FSInputFile, InputMediaPhoto
 from aiogram.enums import ParseMode
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.callbacks.manager import get_openai_callback
@@ -21,13 +21,14 @@ TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 USER_INFO_FILE = "users/user_info.txt"
 ALLOWED_USERS_FILE = "users/allowed_users.txt"
+TRIAL_USERS_FILE = "users/trial_users.txt" 
+TRIAL_LIMIT = 4
 
 RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, RESET = 91, 92, 93, 94, 95, 96, 0
 BOLD, UNDERLINE, ITALIC, REVERSE, STRIKETHROUGH = 1, 4, 3, 7, 9
 
 ALLOWED_USERS = set()
 active_sessions = {}
-passage = ''
 lang = 'english'
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
@@ -43,12 +44,38 @@ lang_keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True
 )
 
+main_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📖 Save Reading Text"), KeyboardButton(text="❓ Ask Reading Question")],
+        [KeyboardButton(text="📈 Proof of Success"), KeyboardButton(text="📜 Instructions")],
+        [KeyboardButton(text="🌐 Change Language")]
+    ],
+    resize_keyboard=True
+)
+
 def colored(text, color_code, styles=None):
     codes = [color_code]
     if styles:
         codes.extend(styles)
     style_codes = ";".join(map(str, codes))
     return f"\033[{style_codes}m{text}\033[0m"
+
+def load_trial_users():
+    trial_users = {}
+    try:
+        with open(TRIAL_USERS_FILE, "r", encoding="utf-8") as f:
+            for line in f:
+                if ": " in line:
+                    user_id, count = line.strip().split(": ")
+                    trial_users[int(user_id)] = int(count)
+    except FileNotFoundError:
+        pass 
+    return trial_users
+
+def save_trial_users(trial_users):
+    with open(TRIAL_USERS_FILE, "w", encoding="utf-8") as f:
+        for user_id, count in trial_users.items():
+            f.write(f"{user_id}: {count}\n")
 
 def load_allowed_users():
     global ALLOWED_USERS
@@ -70,7 +97,7 @@ def record_user(username, user_id):
     new_user = user_id not in existing_users
     if new_user:
         with open(USER_INFO_FILE, "a", encoding="utf-8") as f:
-            f.write(f"USER: {username}, ID: {user_id}\n")
+            f.write(f"USER: {username}, ID: {user_id}, Trial Messages: {TRIAL_LIMIT}\n")
     
     print(colored(f"{timestamp} - START - User {username} ({user_id}) started the bot. {'NEW' if new_user else 'EXISTS'}", 
                  GREEN, [BOLD, UNDERLINE]))
@@ -121,16 +148,57 @@ async def process_ai_reply(message: Message, ai_reply: str):
         if '0000' in ai_reply:
             print(colored(f"{timestamp} - AI - User {username} ({user_id}) - Image not clear.", MAGENTA))
             await send_localized_message(message, "image_not_clear")
-        elif '1111' in passage:
+        elif '1111' in ai_reply:
             print(colored(f"{timestamp} - AI - User {username} ({user_id}) - Not a text image.", MAGENTA))
             await send_localized_message(message, "not_a_text")
         else:
             last_index = ai_reply.rfind("ANSWER:")
-            print(colored(f"{timestamp} - AI - User {username} ({user_id}) - Answer provided.", MAGENTA))
-            await message.answer(ai_reply[last_index:])
+            answer = ai_reply[last_index + 7:].strip()
+            if answer.upper() == "N/A":
+                print(colored(f"{timestamp} - AI - User {username} ({user_id}) - No valid question detected.", MAGENTA))
+                await send_localized_message(message, "no_question_detected")
+            else:
+                print(colored(f"{timestamp} - AI - User {username} ({user_id}) - Answer provided.", MAGENTA))
+                await message.answer(f"{MESSAGES['answer_provided_prefix'][lang]} **{answer}**", 
+                                   parse_mode=ParseMode.MARKDOWN, reply_markup=main_keyboard)
     else:
         print(colored(f"{timestamp} - AI - User {username} ({user_id}) - No answer found.", MAGENTA))
         await send_localized_message(message, "no_answer")
+
+async def check_trial_limit(message: Message):
+    user_id = message.from_user.id
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    trial_users = load_trial_users()
+
+    if user_id not in trial_users:
+        trial_users[user_id] = TRIAL_LIMIT
+        save_trial_users(trial_users)
+    
+    if user_id not in active_sessions:
+        active_sessions[user_id] = {
+            "chat_id": message.chat.id,
+            "trial_count": trial_users[user_id],
+            "passage": ""
+        }
+    
+    if not await check_allowed_user(user_id):
+        active_sessions[user_id]["trial_count"] -= 1
+        trial_users[user_id] = active_sessions[user_id]["trial_count"]
+        save_trial_users(trial_users)
+        
+        remaining = active_sessions[user_id]["trial_count"]
+        if remaining <= 0:
+            print(colored(f"{timestamp} - TRIAL EXPIRED - User {user_id} has no attempts left.", RED))
+            await message.answer(
+                MESSAGES["trial_over"][lang] + "\n[👉 Tap to Contact](https://t.me/teqstura)",
+                parse_mode=ParseMode.MARKDOWN, reply_markup=main_keyboard
+            )
+            return False
+        else:
+            print(colored(f"{timestamp} - TRIAL - User {user_id} has {remaining} attempts left.", YELLOW))
+            await message.answer(MESSAGES["trial_remaining"][lang].format(remaining=remaining), reply_markup=main_keyboard)
+    return True
 
 @dp.message(CommandStart())
 async def start_command(message: Message):
@@ -140,12 +208,30 @@ async def start_command(message: Message):
     
     record_user(username, user_id)
     
-    if not await check_allowed_user(user_id):
-        print(colored(f"{timestamp} - DENIED - User {username} ({user_id}) denied access (not in allowed users).", RED, [BOLD]))
+    trial_users = load_trial_users()
+    
+    if user_id not in active_sessions:
+        if user_id not in trial_users:
+            trial_users[user_id] = TRIAL_LIMIT
+            save_trial_users(trial_users)
+        
+        active_sessions[user_id] = {
+            "chat_id": message.chat.id,
+            "trial_count": trial_users[user_id],
+            "passage": ""
+        }
+        if not await check_allowed_user(user_id):
+            print(colored(f"{timestamp} - TRIAL - User {username} ({user_id}) started trial mode with {trial_users[user_id]} attempts.", YELLOW))
+        else:
+            print(colored(f"{timestamp} - AUTH - User {username} ({user_id}) started as authorized.", GREEN))
+    else:
+        active_sessions[user_id]["chat_id"] = message.chat.id
+    
+    if not await check_allowed_user(user_id) and active_sessions[user_id]["trial_count"] <= 0:
+        print(colored(f"{timestamp} - DENIED - User {username} ({user_id}) trial expired.", RED, [BOLD]))
         await message.answer(DENIED_MESSAGE, parse_mode=ParseMode.MARKDOWN)
         return
     
-    active_sessions[user_id] = message.chat.id
     await message.answer(RULES_MESSAGE['default'], reply_markup=lang_keyboard, parse_mode=ParseMode.MARKDOWN)
 
 @dp.message(lambda message: message.text in ["🇬🇧 English", "🇷🇺 Russian", "🇺🇿 Uzbek"])
@@ -166,44 +252,61 @@ async def set_language(message: Message):
         lang, confirmation, rules = langs[message.text]
         await message.answer(confirmation, parse_mode=ParseMode.MARKDOWN)
         await message.answer(rules, parse_mode=ParseMode.MARKDOWN)
+        await message.answer(MESSAGES["start_prompt"][lang], reply_markup=main_keyboard)
     else:
-        await message.answer("⚠️ Other languages are not supported yet.")
+        await message.answer(MESSAGES["lang_not_supported"][lang], reply_markup=main_keyboard)
 
-@dp.message(lambda message: message.text is not None and message.text != "/logout")
-async def handle_text_question(message: Message):
+@dp.message(lambda message: message.text == "📈 Proof of Success")
+async def show_results(message: Message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    print(colored(f"{timestamp} - RESULTS - User {username} ({user_id}) requested proof of success.", BLUE))
+    
+    result_photos = ["results_photos/result1.jpg", "results_photos/result2.jpg", "results_photos/result3.jpg", "results_photos/result4.jpg"]
+    
+    if all(os.path.exists(photo_path) for photo_path in result_photos):
+        media = [InputMediaPhoto(media=FSInputFile(photo_path)) for photo_path in result_photos]
+
+        media[0].caption = MESSAGES["proof_caption"][lang]
+        
+        await bot.send_media_group(
+            chat_id=message.chat.id,
+            media=media
+        )
+        
+        return
+    else:
+        await message.answer(MESSAGES["proof_coming_soon"][lang], reply_markup=main_keyboard)
+                
+async def show_instructions(message: Message):
+    await message.answer(RULES_MESSAGE[lang], reply_markup=main_keyboard, parse_mode=ParseMode.MARKDOWN)
+
+@dp.message(lambda message: message.text == "🌐 Change Language")
+async def change_language(message: Message):
+    await message.answer(MESSAGES["choose_lang"][lang], reply_markup=lang_keyboard)
+
+@dp.message(lambda message: message.text == "📖 Save Reading Text" or (message.photo and message.caption and message.caption.lower().strip() == "text"))
+async def save_reading_text(message: Message):
     user_id = message.from_user.id
     username = message.from_user.username
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if user_id not in active_sessions:
-        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted text question without active session.", RED, [BOLD]))
+        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted to save text without active session.", RED, [BOLD]))
         await send_localized_message(message, "session_expired")
         return
     
-    print(colored(f"{timestamp} - TEXT - User {username} ({user_id}) asked: {message.text}", BLUE, [BOLD, ITALIC]))
-    try:
-        with get_openai_callback() as cb:
-            response = llm.invoke([HumanMessage(content=PROMPT.format(question=message.text))])
-            #print(f'EVALUATOR: Evaluator Gemini Callback (Text Question): {cb}')
-        await process_ai_reply(message, response.content.strip().upper())
-    except Exception as e:
-        logging.error(f"Error processing text: {e}")
-        await send_localized_message(message, "processing_error")
-
-@dp.message(lambda message: message.photo is not None)
-async def handle_image_question(message: Message):
-    global passage
-    user_id = message.from_user.id
-    username = message.from_user.username
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
-    if user_id not in active_sessions:
-        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted image question without active session.", RED, [BOLD]))
-        await send_localized_message(message, "session_expired")
+    if message.text == "📖 Save Reading Text":
+        await message.answer(MESSAGES["send_reading_prompt"][lang], reply_markup=main_keyboard)
         return
     
-    caption = message.caption.strip().lower() if message.caption else None
-    print(colored(f"{timestamp} - IMAGE - User {username} ({user_id}) sent an image (caption: {caption or 'None'})", BLUE, [BOLD, ITALIC]))
+    if not message.photo or (message.caption and message.caption.lower().strip() != "text"):
+        await message.answer(MESSAGES["photo_required"][lang], reply_markup=main_keyboard)
+        return
+    
+    print(colored(f"{timestamp} - READING - User {username} ({user_id}) sent reading text photo.", BLUE, [BOLD, ITALIC]))
     
     photo = message.photo[-1]
     file_info = await bot.get_file(photo.file_id)
@@ -215,32 +318,141 @@ async def handle_image_question(message: Message):
         await send_localized_message(message, "processing_error")
         return
     
+    await message.answer(MESSAGES["processing"][lang], reply_markup=main_keyboard)
+    
     try:
         image_data = base64.b64encode(httpx.get(file_url).content).decode("utf-8")
-        prompts = {
-            None: PROMPT.format(question='[Image Question]', lang=lang),
-            'text': EXTRACT_PROMPT.format(text='[Image Question]'),
-            'question': PASSAGE_PROMPT.format(question='[Image Question]', passage=passage, lang=lang)
-        }
-        
         response = llm.invoke([HumanMessage(content=[
-            {"type": "text", "text": prompts[caption]},
+            {"type": "text", "text": EXTRACT_PROMPT.format(text='[Image Question]')},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
         ])])
         
-        if caption == 'text':
-            passage = response.content.strip().lower()
-            if "ANSWER:" in passage:
-                print(colored(f"{timestamp} - EXTRACT - User {username} ({user_id}) - Text extracted with answer.", BLUE))
-                await process_ai_reply(message, passage.upper())
-            else:
-                print(colored(f"{timestamp} - EXTRACT - User {username} ({user_id}) - Text extracted and saved.", BLUE))
-                await send_localized_message(message, "text_saved")
-        else:
-            await process_ai_reply(message, response.content.strip().upper())
-            
+        active_sessions[user_id]["passage"] = response.content.strip().lower()
+        print(colored(f"{timestamp} - EXTRACT - User {username} ({user_id}) - Reading text saved.", BLUE))
+        await send_localized_message(message, "text_saved")
+        await message.answer(MESSAGES["text_saved_prompt"][lang], reply_markup=main_keyboard)
+        
+    except Exception as e:
+        logging.error(f"Error processing reading text: {e}")
+        await send_localized_message(message, "processing_error")
+
+@dp.message(lambda message: message.text == "❓ Ask Reading Question" or (message.photo and message.caption and message.caption.lower().strip() == "question"))
+async def ask_reading_question(message: Message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if user_id not in active_sessions:
+        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted reading question without active session.", RED, [BOLD]))
+        await send_localized_message(message, "session_expired")
+        return
+    
+    if not await check_trial_limit(message):
+        return
+    
+    if not active_sessions[user_id]["passage"]:
+        await message.answer(MESSAGES["no_text_saved"][lang], reply_markup=main_keyboard)
+        return
+    
+    if message.text == "❓ Ask Reading Question":
+        await message.answer(MESSAGES["send_reading_question_prompt"][lang], reply_markup=main_keyboard)
+        return
+    
+    if not message.photo or (message.caption and message.caption.lower().strip() != "question"):
+        await message.answer(MESSAGES["photo_required"][lang], reply_markup=main_keyboard)
+        return
+    
+    print(colored(f"{timestamp} - READING QUESTION - User {username} ({user_id}) sent a question photo.", BLUE, [BOLD, ITALIC]))
+    
+    photo = message.photo[-1]
+    file_info = await bot.get_file(photo.file_id)
+    file_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_info.file_path}"
+    file_path = os.path.join("telegram_photos", f"{file_info.file_path.split('/')[-1].split('.')[0]}_{username}_{user_id}.jpg")
+    os.makedirs("telegram_photos", exist_ok=True)
+    
+    if not await download_photo(file_url, file_path):
+        await send_localized_message(message, "processing_error")
+        return
+    
+    await message.answer(MESSAGES["processing"][lang], reply_markup=main_keyboard)
+    
+    try:
+        image_data = base64.b64encode(httpx.get(file_url).content).decode("utf-8")
+        response = llm.invoke([HumanMessage(content=[
+            {"type": "text", "text": PASSAGE_PROMPT.format(question='[Image Question]', passage=active_sessions[user_id]["passage"], lang=lang)},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+        ])])
+        
+        await process_ai_reply(message, response.content.strip().upper())
+        
+    except Exception as e:
+        logging.error(f"Error processing reading question: {e}")
+        await send_localized_message(message, "processing_error")
+
+@dp.message(lambda message: message.photo and message.caption not in ["text", "question"])
+async def handle_image_question(message: Message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if user_id not in active_sessions:
+        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted image question without active session.", RED, [BOLD]))
+        await send_localized_message(message, "session_expired")
+        return
+    
+    if not await check_trial_limit(message):
+        return
+    
+    print(colored(f"{timestamp} - IMAGE - User {username} ({user_id}) sent an image", BLUE, [BOLD, ITALIC]))
+    
+    photo = message.photo[-1]
+    file_info = await bot.get_file(photo.file_id)
+    file_url = f"https://api.telegram.org/file/bot{TELEGRAM_BOT_TOKEN}/{file_info.file_path}"
+    file_path = os.path.join("telegram_photos", f"{file_info.file_path.split('/')[-1].split('.')[0]}_{username}_{user_id}.jpg")
+    os.makedirs("telegram_photos", exist_ok=True)
+    
+    if not await download_photo(file_url, file_path):
+        await send_localized_message(message, "processing_error")
+        return
+    
+    await message.answer(MESSAGES["processing"][lang], reply_markup=main_keyboard)
+    
+    try:
+        image_data = base64.b64encode(httpx.get(file_url).content).decode("utf-8")
+        response = llm.invoke([HumanMessage(content=[
+            {"type": "text", "text": PROMPT.format(question='[Image Question]', lang=lang)},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}},
+        ])])
+        
+        await process_ai_reply(message, response.content.strip().upper())
+        
     except Exception as e:
         logging.error(f"Error processing image: {e}")
+        await send_localized_message(message, "processing_error")
+
+@dp.message(lambda message: message.text and message.text not in ["/logout", "📈 Proof of Success", "📜 Instructions", "🌐 Change Language", "📖 Save Reading Text", "❓ Ask Reading Question"])
+async def handle_text_question(message: Message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if user_id not in active_sessions:
+        print(colored(f"{timestamp} - EXPIRED - User {username} ({user_id}) attempted text question without active session.", RED, [BOLD]))
+        await send_localized_message(message, "session_expired")
+        return
+    
+    if not await check_trial_limit(message):
+        return
+    
+    print(colored(f"{timestamp} - TEXT - User {username} ({user_id}) asked: {message.text}", BLUE, [BOLD, ITALIC]))
+    await message.answer(MESSAGES["processing"][lang], reply_markup=main_keyboard)
+    
+    try:
+        with get_openai_callback() as cb:
+            response = llm.invoke([HumanMessage(content=PROMPT.format(question=message.text))])
+        await process_ai_reply(message, response.content.strip().upper())
+    except Exception as e:
+        logging.error(f"Error processing text: {e}")
         await send_localized_message(message, "processing_error")
 
 @dp.message(lambda message: message.text == "/logout")
@@ -253,31 +465,12 @@ async def logout_user(message: Message):
     
     if user_id in active_sessions:
         del active_sessions[user_id]
-        await message.answer("✅ You have been logged out.")
+        await message.answer(MESSAGES["logout_success"][lang])
     else:
-        await message.answer("⚠️ No active session found.")
+        await message.answer(MESSAGES["no_session"][lang])
 
 async def main():
-    #logging.basicConfig(level=logging.INFO)
     print(colored("Bot started successfully.", GREEN, [BOLD, UNDERLINE]))
-
-    logging_events = [
-        ("Button Press", "Cyan", CYAN),
-        ("Logout", "Yellow", YELLOW),
-        ("Session Expired", "Red", RED),
-        ("Access Denied", "Red", RED),
-        ("AI Response", "Magenta", MAGENTA),
-        ("Photo Download", "Cyan", CYAN),  
-        ("Text Extraction", "Blue", BLUE)
-    ]
-    
-    print(colored("Logging Colors:", GREEN, [BOLD]))
-    print(colored("Event".ljust(20) + "Color", GREEN, [BOLD]))
-    print(colored("-" * 30, GREEN))
-    for event, color_text, color_code in logging_events:
-        print(colored(f"{event.ljust(20)}{color_text}", color_code))
-    print(colored("-" * 30, GREEN))
-    
     await dp.start_polling(bot)
     print(colored("Bot stopped.", RED, [BOLD]))
 

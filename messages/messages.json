@@ -1,37 +1,117 @@
 {
-    "session_expired": {
-      "english": "⚠️ Session expired. Please restart the bot using /start.",
-      "russian": "⚠️ Сессия истекла. Пожалуйста, перезапустите бота с помощью /start.",
-      "uzbek": "⚠️ Sessiya tugadi. Iltimos, /start buyrug'ini yuboring."
-    },
-    "processing_error": {
-      "english": "⚠️ Error processing your request.",
-      "russian": "⚠️ Ошибка при обработке вашего запроса.",
-      "uzbek": "⚠️ So'rovingizni qayta ishlashda xatolik yuz berdi."
-    },
-    "no_answer": {
-      "english": "⚠️ Unable to determine an answer.",
-      "russian": "⚠️ Невозможно определить ответ.",
-      "uzbek": "⚠️ Javobni aniqlash mumkin emas."
-    },
-    "image_not_clear": {
-      "english": "⚠️ Image is not clear enough to answer.",
-      "russian": "⚠️ Изображение недостаточно четкое для ответа.",
-      "uzbek": "⚠️ Rasm javob berish uchun yetarli emas."
-    },
-    "text_saved": {
-      "english": "✅ Text saved.",
-      "russian": "✅ Текст сохранен.",
-      "uzbek": "✅ Matn saqlandi."
-    },
-    "not_a_text": {
-      "english": "⚠️ It is not a text",
-      "russian": "⚠️ Это не текст",
-      "uzbek": "⚠️ Bu matn emas"
-    },
-    "image_not_clear_extract": {
-      "english": "⚠️ Image is not clear enough to extract text.",
-      "russian": "⚠️ Изображение недостаточно четкое для извлечения текста.",
-      "uzbek": "⚠️ Rasm matnini ajratib olish uchun yetarli emas."
-    }
+  "image_not_clear": {
+      "english": "⚠️ The image isn’t clear enough to process.",
+      "russian": "⚠️ Изображение недостаточно четкое для обработки.",
+      "uzbek": "⚠️ Rasm yetarlicha aniq emas."
+  },
+  "not_a_text": {
+      "english": "⚠️ This image doesn’t contain readable text.",
+      "russian": "⚠️ Это изображение не содержит читаемого текста.",
+      "uzbek": "⚠️ Bu rasmda o'qiladigan matn yo'q."
+  },
+  "no_question_detected": {
+      "english": "⚠️ No question found in the image. Please send a valid TOLC question!",
+      "russian": "⚠️ В изображении не найден вопрос. Пожалуйста, отправьте настоящий вопрос TOLC!",
+      "uzbek": "⚠️ Rasmda savol topilmadi. Iltimos, haqiqiy TOLC savolini yuboring!"
+  },
+  "no_answer": {
+      "english": "⚠️ Couldn’t find an answer. Try sending another question!",
+      "russian": "⚠️ Не удалось найти ответ. Попробуйте отправить другой вопрос!",
+      "uzbek": "⚠️ Javob topilmadi. Boshqa savolni yuborib ko'ring!"
+  },
+  "answer_provided_prefix": {
+      "english": "✅ Here’s your answer:",
+      "russian": "✅ Вот ваш ответ:",
+      "uzbek": "✅ Mana sizning javobingiz:"
+  },
+  "text_saved": {
+      "english": "✅ Text saved successfully!",
+      "russian": "✅ Текст успешно сохранен!",
+      "uzbek": "✅ Matn muvaffaqiyatli saqlandi!"
+  },
+  "session_expired": {
+      "english": "⚠️ Your session has expired. Use /start to begin again.",
+      "russian": "⚠️ Ваша сессия истекла. Используйте /start, чтобы начать заново.",
+      "uzbek": "⚠️ Sizning seansingiz tugadi. Qayta boshlash uchun /start dan foydalaning."
+  },
+  "processing_error": {
+      "english": "⚠️ Something went wrong. Please try again!",
+      "russian": "⚠️ Что-то пошло не так. Пожалуйста, попробуйте снова!",
+      "uzbek": "⚠️ Nimadir xato bo'ldi. Iltimos, qayta urinib ko'ring!"
+  },
+  "trial_over": {
+      "english": "⚠️ Your trial is over! Contact @teqstura to unlock full access.",
+      "russian": "⚠️ Ваш пробный период закончился! Свяжитесь с @teqstura, чтобы открыть полный доступ.",
+      "uzbek": "⚠️ Sinov muddati tugadi! To'liq kirish uchun @teqstura bilan bog'laning."
+  },
+  "trial_remaining": {
+      "english": "ℹ️ Trial mode: {remaining} questions left.",
+      "russian": "ℹ️ Пробный режим: осталось {remaining} вопросов.",
+      "uzbek": "ℹ️ Sinov rejimi: {remaining} ta savol qoldi."
+  },
+  "start_prompt": {
+      "english": "ℹ️ Send a photo or text question to get started! 👇",
+      "russian": "ℹ️ Отправьте фото или текстовый вопрос, чтобы начать! 👇",
+      "uzbek": "ℹ️ Boshlash uchun rasm yoki matnli savol yuboring! 👇"
+  },
+  "lang_not_supported": {
+      "english": "⚠️ Other languages are not supported yet.",
+      "russian": "⚠️ Другие языки пока не поддерживаются.",
+      "uzbek": "⚠️ Boshqa tillar hali qo'llab-quvvatlanmaydi."
+  },
+  "proof_caption": {
+      "english": "📈 Check out these scores! Ready to achieve yours? Send a question now! 👇",
+      "russian": "📈 Посмотрите на эти результаты! Готовы достичь своих? Отправьте вопрос сейчас! 👇",
+      "uzbek": "📈 Bu natijalarni ko'ring! O'zingiznikiga erishishga tayyormisiz? Savol yuboring! 👇"
+  },
+  "proof_coming_soon": {
+      "english": "ℹ️ Proof of success coming soon! Stay tuned.",
+      "russian": "ℹ️ Доказательства успеха скоро появятся! Следите за обновлениями.",
+      "uzbek": "ℹ️ Muvaffaqiyat dalillari tez orada keladi! Kuzatib turing."
+  },
+  "choose_lang": {
+      "english": "🌐 Choose your language:",
+      "russian": "🌐 Выберите ваш язык:",
+      "uzbek": "🌐 Tilingizni tanlang:"
+  },
+  "send_reading_prompt": {
+      "english": "ℹ️ Please send a photo of the reading passage with caption 'text'!",
+      "russian": "ℹ️ Пожалуйста, отправьте фото текста для чтения с подписью 'text'!",
+      "uzbek": "ℹ️ Iltimos, o'qish uchun matn rasmini 'text' sarlavhasi bilan yuboring!"
+  },
+  "text_saved_prompt": {
+      "english": "ℹ️ Now send your question photo with caption 'question'!",
+      "russian": "ℹ️ Теперь отправьте фото вопроса с подписью 'question'!",
+      "uzbek": "ℹ️ Endi savol rasmini 'question' sarlavhasi bilan yuboring!"
+  },
+  "no_text_saved": {
+      "english": "⚠️ No reading text saved yet! Use '📖 Save Reading Text' with a photo first.",
+      "russian": "⚠️ Текст для чтения еще не сохранен! Сначала используйте '📖 Save Reading Text' с фото.",
+      "uzbek": "⚠️ O'qish matni hali saqlanmagan! Avval '📖 Save Reading Text' ni foto bilan ishlat."
+  },
+  "send_reading_question_prompt": {
+      "english": "ℹ️ Please send a photo of your question with caption 'question'!",
+      "russian": "ℹ️ Пожалуйста, отправьте фото вопроса с подписью 'question'!",
+      "uzbek": "ℹ️ Iltimos, savol rasmini 'question' sarlavhasi bilan yuboring!"
+  },
+  "photo_required": {
+      "english": "⚠️ Please send a photo with the correct caption ('text' or 'question')!",
+      "russian": "⚠️ Пожалуйста, отправьте фото с правильной подписью ('text' или 'question')!",
+      "uzbek": "⚠️ Iltimos, to'g'ri sarlavha ('text' yoki 'question') bilan rasm yuboring!"
+  },
+  "processing": {
+      "english": "⏳ Processing your question...",
+      "russian": "⏳ Обрабатываю ваш вопрос...",
+      "uzbek": "⏳ Savolingizni qayta ishlayapman..."
+  },
+  "logout_success": {
+      "english": "✅ You have been logged out.",
+      "russian": "✅ Вы вышли из системы.",
+      "uzbek": "✅ Siz tizimdan chiqdingiz."
+  },
+  "no_session": {
+      "english": "⚠️ No active session found.",
+      "russian": "⚠️ Активная сессия не найдена.",
+      "uzbek": "⚠️ Faol seans topilmadi."
   }
+}
