@@ -22,7 +22,8 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 USER_INFO_FILE = "users/user_info.txt"
 ALLOWED_USERS_FILE = "users/allowed_users.txt"
 TRIAL_USERS_FILE = "users/trial_users.txt" 
-TRIAL_LIMIT = 4
+TRIAL_LIMIT = 3
+REGISTRATION_LINK = "#"  
 
 RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, RESET = 91, 92, 93, 94, 95, 96, 0
 BOLD, UNDERLINE, ITALIC, REVERSE, STRIKETHROUGH = 1, 4, 3, 7, 9
@@ -30,6 +31,8 @@ BOLD, UNDERLINE, ITALIC, REVERSE, STRIKETHROUGH = 1, 4, 3, 7, 9
 ALLOWED_USERS = set()
 active_sessions = {}
 lang = 'english'
+trial_reminder_tasks = {} 
+expired_promotion_tasks = {}
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 dp = Dispatcher()
@@ -48,7 +51,7 @@ main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📖 Save Reading Text"), KeyboardButton(text="❓ Ask Reading Question")],
         [KeyboardButton(text="📈 Proof of Success"), KeyboardButton(text="📜 Instructions")],
-        [KeyboardButton(text="🌐 Change Language")]
+        [KeyboardButton(text="🌐 Change Language"), KeyboardButton(text="📋 Exam Registration")]
     ],
     resize_keyboard=True
 )
@@ -179,7 +182,8 @@ async def check_trial_limit(message: Message):
         active_sessions[user_id] = {
             "chat_id": message.chat.id,
             "trial_count": trial_users[user_id],
-            "passage": ""
+            "passage": "",
+            "language": "english"
         }
     
     if not await check_allowed_user(user_id):
@@ -187,18 +191,72 @@ async def check_trial_limit(message: Message):
         trial_users[user_id] = active_sessions[user_id]["trial_count"]
         save_trial_users(trial_users)
         
-        remaining = active_sessions[user_id]["trial_count"]
+        remaining = active_sessions[user_id]["trial_count"] + 1
         if remaining <= 0:
             print(colored(f"{timestamp} - TRIAL EXPIRED - User {user_id} has no attempts left.", RED))
             await message.answer(
                 MESSAGES["trial_over"][lang] + "\n[👉 Tap to Contact](https://t.me/teqstura)",
                 parse_mode=ParseMode.MARKDOWN, reply_markup=main_keyboard
             )
+
+            if user_id not in expired_promotion_tasks:
+                task = asyncio.create_task(send_expired_trial_promotion(user_id))
+                expired_promotion_tasks[user_id] = task
+
+            if user_id in trial_reminder_tasks:
+                trial_reminder_tasks[user_id].cancel()
+                del trial_reminder_tasks[user_id]
             return False
         else:
             print(colored(f"{timestamp} - TRIAL - User {user_id} has {remaining} attempts left.", YELLOW))
-            await message.answer(MESSAGES["trial_remaining"][lang].format(remaining=remaining), reply_markup=main_keyboard)
+            await message.answer(MESSAGES["trial_remaining"][lang].format(remaining=remaining - 1), reply_markup=main_keyboard)
     return True
+
+async def send_trial_reminder(user_id: int):
+    while True:
+        if user_id not in active_sessions or await check_allowed_user(user_id) or active_sessions[user_id]["trial_count"] <= 0:
+            if user_id in trial_reminder_tasks:
+                del trial_reminder_tasks[user_id]
+            break
+        
+        chat_id = active_sessions[user_id]["chat_id"]
+        user_lang = active_sessions[user_id]["language"]
+        try:
+            await bot.send_message(
+                chat_id=chat_id,
+                text=MESSAGES["trial_reminder"][user_lang],
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=main_keyboard
+            )
+            print(colored(f"{datetime.now():%Y-%m-%d %H:%M:%S} - REMINDER - Sent to user {user_id}", CYAN))
+        except Exception as e:
+            print(colored(f"{datetime.now():%Y-%m-%d %H:%M:%S} - REMINDER ERROR - User {user_id}: {e}", RED))
+        
+        await asyncio.sleep(3 * 60 * 60) 
+
+async def send_expired_trial_promotion(user_id: int):
+    while True:
+        if user_id not in active_sessions or await check_allowed_user(user_id):
+            if user_id in expired_promotion_tasks:
+                del expired_promotion_tasks[user_id]
+            break
+        
+        chat_id = active_sessions[user_id]["chat_id"]
+        user_lang = active_sessions[user_id]["language"]
+        try:
+          
+            message_text = MESSAGES["trial_expired_promotion"][user_lang]
+            await bot.send_message(
+                chat_id=chat_id,
+                text=message_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=main_keyboard
+            )
+            print(colored(f"{datetime.now():%Y-%m-%d %H:%M:%S} - PROMOTION REMINDER - Sent to user {user_id}", CYAN))
+        except Exception as e:
+            print(colored(f"{datetime.now():%Y-%m-%d %H:%M:%S} - PROMOTION REMINDER ERROR - User {user_id}: {e}", RED))
+        
+        await asyncio.sleep(3 * 60 * 60) 
 
 @dp.message(CommandStart())
 async def start_command(message: Message):
@@ -218,10 +276,19 @@ async def start_command(message: Message):
         active_sessions[user_id] = {
             "chat_id": message.chat.id,
             "trial_count": trial_users[user_id],
-            "passage": ""
+            "passage": "",
+            "language": "english"
         }
         if not await check_allowed_user(user_id):
             print(colored(f"{timestamp} - TRIAL - User {username} ({user_id}) started trial mode with {trial_users[user_id]} attempts.", YELLOW))
+            if active_sessions[user_id]["trial_count"] > 0:
+                if user_id not in trial_reminder_tasks:
+                    task = asyncio.create_task(send_trial_reminder(user_id))
+                    trial_reminder_tasks[user_id] = task
+            else:
+                if user_id not in expired_promotion_tasks:
+                    task = asyncio.create_task(send_expired_trial_promotion(user_id))
+                    expired_promotion_tasks[user_id] = task
         else:
             print(colored(f"{timestamp} - AUTH - User {username} ({user_id}) started as authorized.", GREEN))
     else:
@@ -230,6 +297,9 @@ async def start_command(message: Message):
     if not await check_allowed_user(user_id) and active_sessions[user_id]["trial_count"] <= 0:
         print(colored(f"{timestamp} - DENIED - User {username} ({user_id}) trial expired.", RED, [BOLD]))
         await message.answer(DENIED_MESSAGE, parse_mode=ParseMode.MARKDOWN)
+        if user_id not in expired_promotion_tasks:
+            task = asyncio.create_task(send_expired_trial_promotion(user_id))
+            expired_promotion_tasks[user_id] = task
         return
     
     await message.answer(RULES_MESSAGE['default'], reply_markup=lang_keyboard, parse_mode=ParseMode.MARKDOWN)
@@ -250,11 +320,23 @@ async def set_language(message: Message):
     }
     if message.text in langs:
         lang, confirmation, rules = langs[message.text]
+        active_sessions[user_id]["language"] = lang 
         await message.answer(confirmation, parse_mode=ParseMode.MARKDOWN)
         await message.answer(rules, parse_mode=ParseMode.MARKDOWN)
         await message.answer(MESSAGES["start_prompt"][lang], reply_markup=main_keyboard)
     else:
         await message.answer(MESSAGES["lang_not_supported"][lang], reply_markup=main_keyboard)
+
+@dp.message(lambda message: message.text == "📋 Exam Registration")
+async def show_exam_registration(message: Message):
+    user_id = message.from_user.id
+    user_lang = active_sessions[user_id]["language"]
+    messages = {
+        "english": f"📋 To register for the exam, follow this link: [Exam Registration]({REGISTRATION_LINK})",
+        "russian": f"📋 Чтобы зарегистрироваться на экзамен, перейдите по ссылке: [Регистрация на экзамен]({REGISTRATION_LINK})",
+        "uzbek": f"📋 Imtihonga ro'yxatdan o'tish uchun ushbu havolaga o'ting: [Imtihonga ro'yxatdan o'tish]({REGISTRATION_LINK})"
+    }
+    await message.answer(messages[user_lang], parse_mode=ParseMode.MARKDOWN, reply_markup=main_keyboard)
 
 @dp.message(lambda message: message.text == "📈 Proof of Success")
 async def show_results(message: Message):
@@ -472,6 +554,10 @@ async def logout_user(message: Message):
 async def main():
     print(colored("Bot started successfully.", GREEN, [BOLD, UNDERLINE]))
     await dp.start_polling(bot)
+    for task in trial_reminder_tasks.values():
+        task.cancel()
+    for task in expired_promotion_tasks.values():
+        task.cancel()
     print(colored("Bot stopped.", RED, [BOLD]))
 
 if __name__ == "__main__":

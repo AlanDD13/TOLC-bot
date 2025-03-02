@@ -113,5 +113,20 @@
       "english": "⚠️ No active session found.",
       "russian": "⚠️ Активная сессия не найдена.",
       "uzbek": "⚠️ Faol seans topilmadi."
+  },
+  "trial_reminder": {
+      "english": "ℹ️ Don't forget to try our bot's features! Your trial is active.",
+      "russian": "ℹ️ Не забудьте попробовать функции нашего бота! Ваш пробный период активен.",
+      "uzbek": "ℹ️ Botimiz funksiyalarini sinab ko'rishni unutmang! Sinov muddati faol."
+  },
+  "exam_registration": {
+      "english": "📋 To register for the exam, follow this link: [Exam Registration]({link})",
+      "russian": "📋 Чтобы зарегистрироваться на экзамен, перейдите по ссылке: [Регистрация на экзамен]({link})",
+      "uzbek": "📋 Imtihonga ro'yxatdan o'tish uchun ushbu havolaga o'ting: [Imtihonga ro'yxatdan o'tish]({link})"
+  },
+  "trial_expired_promotion": {
+      "english": "🎉 Your trial has ended, but the journey doesn’t have to stop! Unlock unlimited access to our bot—solve questions instantly, boost your exam prep, and join hundreds of successful students. Contact @teqstura now to get full access!",
+      "russian": "🎉 Ваш пробный период закончился, но путешествие не должно останавливаться! Разблокируйте безлимитный доступ к нашему боту — решайте вопросы мгновенно, улучшайте подготовку к экзаменам и присоединяйтесь к сотням успешных студентов. Свяжитесь с @teqstura прямо сейчас, чтобы получить полный доступ!",
+      "uzbek": "🎉 Sinov muddati tugadi, lekin sayohat to'xtashi shart emas! Botimizga cheksiz kirishni oching — savollarni darhol hal qiling, imtihonga tayyorgarlikni yaxshilang va yuzlab muvaffaqiyatli talabalarga qo'shiling. Hozir @teqstura bilan bog‘laning va to‘liq kirish huquqiga ega bo‘ling!"
   }
 }
